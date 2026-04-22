@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Format'Upgrade — Simulateur Workflow Multi-Agents</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#F7F6F3;--surface:#FFFFFF;--surface2:#F1F0ED;--border:#E2E0DA;--border2:#CCC9C0;
+  --text:#1C1C1A;--text2:#6B6860;--text3:#9E9B94;
+  --blue-bg:#EBF3FD;--blue-border:#B8D4F5;--blue-text:#1A5FA8;
+  --green-bg:#EAF5EE;--green-border:#B2DFC0;--green-text:#1A7A3C;--green-dot:#2D9E52;
+  --amber-bg:#FDF4E3;--amber-border:#F5D98A;--amber-text:#8A6000;--amber-dot:#D4A017;
+  --purple-bg:#F0ECFD;--purple-border:#C9BBF5;--purple-text:#5030A8;
+  --red-bg:#FDECEA;--red-border:#F5B8B2;--red-text:#A82020;
+  --success:#2D9E52;--warning:#D4A017;--danger:#D43030;
+  --radius:10px;--radius-sm:6px;--radius-lg:14px;
+  --font:'DM Sans',system-ui,sans-serif;--font-display:'Bebas Neue',system-ui,sans-serif;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh;overflow-x:hidden;}
+
+/* ══ SPLASH ══ */
+#splash{position:fixed;inset:0;background:#1C1C1A;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .5s ease;}
+#splash.out{opacity:0;pointer-events:none;}
+.splash-eyebrow{font-size:12px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:#9E9B94;margin-bottom:20px;}
+.splash-title{font-family:var(--font-display);font-size:clamp(64px,10vw,120px);color:#FFFFFF;line-height:.95;text-align:center;letter-spacing:.02em;}
+.splash-title span{color:#E2E0DA;}
+.splash-sub{font-size:14px;color:#6B6860;margin-top:20px;margin-bottom:48px;text-align:center;max-width:360px;line-height:1.6;}
+.splash-btn{font-family:var(--font);font-size:14px;font-weight:600;padding:14px 40px;border-radius:50px;background:#FFFFFF;color:#1C1C1A;border:none;cursor:pointer;letter-spacing:.04em;transition:all .2s;}
+.splash-btn:hover{background:#F1F0ED;transform:scale(1.02);}
+.splash-dots{display:flex;gap:8px;margin-top:60px;}
+.splash-dot{width:6px;height:6px;border-radius:50%;background:#3A3A38;}
+
+/* ══ APP ══ */
+#app{opacity:0;transition:opacity .4s ease;}
+#app.in{opacity:1;}
+.app-header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100;}
+.app-logo{font-family:var(--font-display);font-size:20px;letter-spacing:.04em;color:var(--text);display:flex;align-items:center;gap:10px;}
+.logo-dot{width:7px;height:7px;border-radius:50%;background:var(--text);display:inline-block;}
+.app-sub{font-size:11px;color:var(--text3);font-weight:400;font-family:var(--font);}
+.hbadge{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);margin-left:6px;}
+.tabs-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:2px;}
+.tab-btn{font-family:var(--font);font-size:13px;font-weight:500;padding:11px 16px;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s;}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--text);}
+.tab-panel{display:none;padding:24px;}
+.tab-panel.active{display:block;}
+
+/* ══ SIM LAYOUT ══ */
+.sim-layout{display:grid;grid-template-columns:220px 1fr;gap:20px;max-width:1100px;}
+.panel-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;}
+.pipe-node{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;transition:all .2s;}
+.pipe-node.state-running{border-color:var(--amber-border);background:var(--amber-bg);animation:pulse .9s infinite;}
+.pipe-node.state-done{border-color:var(--green-border);background:var(--green-bg);}
+.pipe-node.state-error{border-color:var(--red-border);background:var(--red-bg);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.7;}}
+.node-row{display:flex;align-items:center;gap:8px;}
+.node-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;}
+.ni-trigger{background:var(--blue-bg);color:var(--blue-text);}
+.ni-a1{background:var(--green-bg);color:var(--green-text);}
+.ni-a2{background:var(--amber-bg);color:var(--amber-text);}
+.ni-a3{background:var(--purple-bg);color:var(--purple-text);}
+.ni-a4{background:var(--red-bg);color:var(--red-text);}
+.ni-out{background:var(--green-bg);color:var(--green-text);}
+.node-name{font-size:12px;font-weight:500;color:var(--text);}
+.node-st{font-size:10px;color:var(--text3);margin-top:1px;}
+.pipe-node.state-running .node-name{color:var(--amber-text);}
+.pipe-node.state-done .node-name{color:var(--green-text);}
+.pipe-node.state-running .node-st{color:var(--amber-text);}
+.pipe-node.state-done .node-st{color:var(--green-text);}
+.pipe-conn{display:flex;align-items:center;justify-content:center;height:14px;position:relative;}
+.pipe-conn::before{content:'';display:block;width:1px;height:10px;background:var(--border2);position:absolute;top:0;}
+.pipe-conn::after{content:'';width:5px;height:5px;border-right:1.5px solid var(--border2);border-bottom:1.5px solid var(--border2);transform:rotate(45deg);position:absolute;bottom:1px;}
+.pipe-conn.conn-done::before{background:var(--green-dot);}
+.pipe-conn.conn-done::after{border-color:var(--green-dot);}
+.pipe-conn.conn-active::before{background:var(--amber-dot);}
+.pipe-conn.conn-active::after{border-color:var(--amber-dot);}
+.pipe-tip{margin-top:14px;background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;font-size:11px;color:var(--text2);line-height:1.5;border:1px solid var(--border);}
+.main-col{display:flex;flex-direction:column;gap:16px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.card-title{font-size:13px;font-weight:600;color:var(--text);}
+.qbtns{display:flex;gap:6px;flex-wrap:wrap;}
+.qbtn{font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:20px;background:none;cursor:pointer;color:var(--text2);font-family:var(--font);transition:all .15s;}
+.qbtn:hover{background:var(--surface2);border-color:var(--border2);color:var(--text);}
+.email-meta{display:grid;grid-template-columns:52px 1fr;gap:5px 10px;align-items:center;margin-bottom:10px;}
+.meta-lbl{font-size:11px;color:var(--text3);text-align:right;}
+.meta-inp{font-size:12px;font-family:var(--font);padding:5px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);width:100%;}
+.meta-inp:focus{outline:none;border-color:var(--border2);}
+.email-body{width:100%;font-size:12px;font-family:var(--font);line-height:1.7;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;background:var(--surface2);color:var(--text);resize:vertical;min-height:110px;}
+.email-body:focus{outline:none;border-color:var(--border2);}
+.launch-row{display:flex;align-items:center;gap:10px;margin-top:12px;}
+.launch-btn{font-family:var(--font);font-size:13px;font-weight:600;padding:9px 22px;border-radius:var(--radius);background:var(--text);color:#fff;border:none;cursor:pointer;transition:opacity .15s;}
+.launch-btn:hover{opacity:.85;}
+.launch-btn:disabled{opacity:.35;cursor:not-allowed;}
+.ghost-btn{font-size:12px;font-family:var(--font);padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:none;cursor:pointer;color:var(--text2);transition:all .15s;}
+.ghost-btn:hover{background:var(--surface2);}
+.prog-wrap{flex:1;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;border:1px solid var(--border);}
+.prog-bar{height:100%;width:0%;background:var(--text);border-radius:2px;transition:width .4s ease;}
+.results-area{display:flex;flex-direction:column;gap:10px;}
+.empty-msg{text-align:center;padding:32px 16px;color:var(--text3);font-size:13px;background:var(--surface);border:1px dashed var(--border2);border-radius:var(--radius-lg);}
+.empty-icon{font-size:24px;margin-bottom:8px;}
+.rc{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
+.rc-hdr{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;user-select:none;transition:background .15s;}
+.rc-hdr:hover{background:var(--surface2);}
+.rc-badge{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;}
+.rc-title{font-size:13px;font-weight:500;color:var(--text);flex:1;}
+.rc-chip{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;}
+.chip-idle{background:var(--surface2);color:var(--text3);border:1px solid var(--border);}
+.chip-running{background:var(--amber-bg);color:var(--amber-text);border:1px solid var(--amber-border);}
+.chip-done{background:var(--green-bg);color:var(--green-text);border:1px solid var(--green-border);}
+.chip-warn{background:var(--red-bg);color:var(--red-text);border:1px solid var(--red-border);}
+.chevron{font-size:10px;color:var(--text3);transition:transform .2s;margin-left:4px;}
+.chevron.open{transform:rotate(180deg);}
+.rc-body{border-top:1px solid var(--border);padding:12px 14px;display:none;}
+.rc-body.open{display:block;}
+.rc-content{font-size:12px;line-height:1.8;color:var(--text);white-space:pre-wrap;}
+.rc-content.streaming::after{content:'▋';animation:blink .6s infinite;color:var(--text3);}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+.score-row{display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.score-lbl{font-size:11px;color:var(--text2);}
+.score-num{font-size:20px;font-weight:700;}
+.score-bar-wrap{flex:1;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.score-bar{height:100%;border-radius:3px;transition:width .6s ease;}
+.final-card{background:var(--surface);border:1px solid var(--green-border);border-radius:var(--radius-lg);padding:16px;}
+.final-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.final-icon{width:26px;height:26px;border-radius:50%;background:var(--green-bg);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--green-text);flex-shrink:0;}
+.final-title{font-size:13px;font-weight:600;color:var(--text);flex:1;}
+.final-email{font-size:12px;line-height:1.85;color:var(--text);white-space:pre-wrap;background:var(--surface2);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border);}
+.copy-btn{font-size:11px;font-family:var(--font);padding:6px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:none;cursor:pointer;color:var(--text2);margin-top:8px;transition:all .15s;}
+.copy-btn:hover{background:var(--surface2);}
+
+/* ══ AGENTS CONFIG ══ */
+.cfg-intro{font-size:12px;color:var(--amber-text);margin-bottom:16px;padding:10px 14px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--radius-sm);line-height:1.6;}
+.agents-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;}
+.acfg{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;}
+.acfg-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.acfg-title{font-size:13px;font-weight:600;color:var(--text);}
+.acfg-sub{font-size:11px;color:var(--text3);}
+.acfg-ta{width:100%;font-size:11.5px;font-family:'DM Sans',monospace;line-height:1.6;border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px;background:var(--surface2);color:var(--text);resize:vertical;min-height:120px;}
+.acfg-ta:focus{outline:none;border-color:var(--border2);}
+.acfg-ta.has-content{border-color:var(--border2);}
+.acfg-footer{display:flex;align-items:center;justify-content:space-between;margin-top:7px;}
+.acfg-hint{font-size:10px;color:var(--text3);}
+.acfg-clear{font-size:11px;font-family:var(--font);padding:4px 10px;border:1px solid var(--border);border-radius:20px;background:none;cursor:pointer;color:var(--text2);}
+.acfg-clear:hover{background:var(--surface2);}
+.lib-sep{display:flex;align-items:center;gap:12px;margin:8px 0 16px;}
+.lib-sep-line{flex:1;height:1px;background:var(--border);}
+.lib-sep-txt{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);}
+.lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+.lib-item{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface);}
+.lib-item-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;user-select:none;transition:background .15s;gap:8px;}
+.lib-item-hdr:hover{background:var(--surface2);}
+.lib-item-icon{width:28px;height:28px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+.lib-item-name{font-size:12px;font-weight:500;color:var(--text);flex:1;line-height:1.3;}
+.lib-item-tag{font-size:9px;padding:2px 7px;border-radius:20px;font-weight:500;white-space:nowrap;background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.tag-ok{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.tag-wrong{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.lib-item-body{display:none;border-top:1px solid var(--border);padding:10px 12px;}
+.lib-item-body.open{display:block;}
+.lib-item-prompt{font-size:11px;font-family:'DM Sans',monospace;line-height:1.6;color:var(--text2);white-space:pre-wrap;margin-bottom:8px;max-height:180px;overflow-y:auto;}
+.lib-copy-btn{font-size:11px;font-family:var(--font);padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:none;cursor:pointer;color:var(--text2);transition:all .15s;}
+.lib-copy-btn:hover{background:var(--surface2);}
+
+/* ══ RAG TAB ══ */
+.rag-intro{font-size:12px;color:var(--blue-text);margin-bottom:16px;padding:10px 14px;background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--radius-sm);line-height:1.6;}
+.rag-layout{display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;}
+.drop-zone{min-height:320px;border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:16px;background:var(--surface);transition:all .2s;position:relative;}
+.drop-zone.drag-over{border-color:var(--amber-dot);background:var(--amber-bg);}
+.drop-zone-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:240px;color:var(--text3);text-align:center;pointer-events:none;}
+.drop-zone-icon{font-size:32px;margin-bottom:10px;opacity:.4;}
+.drop-zone-txt{font-size:13px;line-height:1.6;}
+.drop-zone-hint{font-size:11px;margin-top:6px;opacity:.7;}
+.rag-doc-chip{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:8px;position:relative;}
+.rag-doc-chip-icon{font-size:14px;}
+.rag-doc-chip-name{font-size:12px;font-weight:500;color:var(--text);flex:1;}
+.rag-doc-remove{font-size:14px;color:var(--text3);cursor:pointer;padding:2px 6px;border-radius:4px;border:none;background:none;transition:background .15s;line-height:1;}
+.rag-doc-remove:hover{background:var(--border);}
+.rag-clear-btn{font-size:11px;font-family:var(--font);padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:none;cursor:pointer;color:var(--text2);margin-top:4px;}
+.rag-clear-btn:hover{background:var(--surface2);}
+.lib-sep2{display:flex;align-items:center;gap:12px;margin:16px 0;}
+.doc-lib-list{display:flex;flex-direction:column;gap:8px;}
+.doc-lib-item{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface);cursor:grab;}
+.doc-lib-item:active{cursor:grabbing;opacity:.8;}
+.doc-lib-hdr{display:flex;align-items:center;gap:8px;padding:9px 12px;user-select:none;transition:background .15s;}
+.doc-lib-hdr:hover{background:var(--surface2);}
+.doc-lib-icon{font-size:14px;flex-shrink:0;}
+.doc-lib-name{font-size:12px;font-weight:500;color:var(--text);flex:1;}
+.doc-expand-btn{font-size:11px;font-weight:500;color:var(--text2);border:1px solid var(--border);background:var(--surface2);cursor:pointer;padding:4px 10px;border-radius:20px;transition:all .15s;white-space:nowrap;flex-shrink:0;}
+.doc-expand-btn:hover{background:var(--border2);color:var(--text);}
+.doc-lib-body{display:none;border-top:1px solid var(--border);padding:10px 12px;}
+.doc-lib-body.open{display:block;}
+.doc-lib-content{font-size:11px;font-family:'DM Sans',monospace;line-height:1.6;color:var(--text2);white-space:pre-wrap;max-height:150px;overflow-y:auto;}
+.doc-drag-hint{font-size:10px;color:var(--text3);margin-top:6px;font-style:italic;}
+.drop-zone-label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;}
+.rag-stats{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.rag-stat{font-size:11px;padding:3px 10px;border-radius:20px;}
+.rag-stat-ok{background:var(--green-bg);color:var(--green-text);border:1px solid var(--green-border);}
+.rag-stat-bad{background:var(--red-bg);color:var(--red-text);border:1px solid var(--red-border);}
+.rag-stat-neutral{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+</style>
+</head>
+<body>
+
+<!-- ══ SPLASH ══ -->
+<div id="splash">
+  <div class="splash-eyebrow">Format'Upgrade — Formation IA</div>
+  <div class="splash-title">SIMULATION<br><span>WORKFLOW</span></div>
+  <div class="splash-sub">Découvrez comment 4 agents IA collaborent pour traiter une demande d'inscription en temps réel.</div>
+  <button class="splash-btn" onclick="startApp()">Commencer</button>
+  <div class="splash-dots">
+    <div class="splash-dot"></div>
+    <div class="splash-dot" style="background:#5A5A58"></div>
+    <div class="splash-dot" style="background:#5A5A58"></div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+  <header class="app-header">
+    <div class="app-logo">
+      <span class="logo-dot"></span>
+      SIMULATEUR
+      <span class="app-sub">— Format'Upgrade</span>
+    </div>
+    <div>
+      <span class="hbadge">4 agents IA</span>
+      <span class="hbadge">Hors ligne</span>
+    </div>
+  </header>
+
+  <div class="tabs-bar">
+    <button class="tab-btn active" onclick="switchTab('sim')">Simulation</button>
+    <button class="tab-btn" onclick="switchTab('agents')">Configurer les agents</button>
+    <button class="tab-btn" onclick="switchTab('rag')">Base documentaire (RAG)</button>
+  </div>
+
+  <!-- SIM -->
+  <div id="tab-sim" class="tab-panel active">
+    <div class="sim-layout">
+      <div>
+        <div class="panel-label">Pipeline</div>
+        <div id="pipe-nodes">
+          <div class="pipe-node state-idle" id="node-trigger"><div class="node-row"><div class="node-icon ni-trigger">✉</div><div><div class="node-name">Email entrant</div><div class="node-st" id="st-trigger">En attente</div></div></div></div>
+          <div class="pipe-conn" id="conn-1"></div>
+          <div class="pipe-node state-idle" id="node-a1"><div class="node-row"><div class="node-icon ni-a1">A1</div><div><div class="node-name">Qualification</div><div class="node-st" id="st-a1">En attente</div></div></div></div>
+          <div class="pipe-conn" id="conn-2"></div>
+          <div class="pipe-node state-idle" id="node-a2"><div class="node-row"><div class="node-icon ni-a2">A2</div><div><div class="node-name">Contrôle docs</div><div class="node-st" id="st-a2">En attente</div></div></div></div>
+          <div class="pipe-conn" id="conn-3"></div>
+          <div class="pipe-node state-idle" id="node-a3"><div class="node-row"><div class="node-icon ni-a3">A3</div><div><div class="node-name">Rédaction</div><div class="node-st" id="st-a3">En attente</div></div></div></div>
+          <div class="pipe-conn" id="conn-4"></div>
+          <div class="pipe-node state-idle" id="node-a4"><div class="node-row"><div class="node-icon ni-a4">A4</div><div><div class="node-name">Supervision</div><div class="node-st" id="st-a4">En attente</div></div></div></div>
+          <div class="pipe-conn" id="conn-5"></div>
+          <div class="pipe-node state-idle" id="node-out"><div class="node-row"><div class="node-icon ni-out">✓</div><div><div class="node-name">Résultat final</div><div class="node-st" id="st-out">En attente</div></div></div></div>
+        </div>
+        <div class="pipe-tip" id="pipe-tip">Charge un email ou rédige un message, puis lance le pipeline.</div>
+      </div>
+      <div class="main-col">
+        <div class="card">
+          <div class="card-hdr">
+            <div class="card-title">Email entrant</div>
+            <div class="qbtns">
+              <button class="qbtn" onclick="loadC('A')">Lucas — Demandeur d'emploi</button>
+              <button class="qbtn" onclick="loadC('B')">Sophie — Salariée</button>
+              <button class="qbtn" onclick="clearEmail()">Effacer</button>
+            </div>
+          </div>
+          <div class="email-meta">
+            <span class="meta-lbl">De</span><input class="meta-inp" id="efrom" type="text" placeholder="expediteur@exemple.fr">
+            <span class="meta-lbl">Objet</span><input class="meta-inp" id="esubj" type="text" placeholder="Objet du message">
+          </div>
+          <textarea class="email-body" id="ebody" placeholder="Rédige ici le message du candidat, ou charge un exemple avec les boutons ci-dessus..."></textarea>
+          <div class="launch-row">
+            <button class="launch-btn" id="launch-btn" onclick="launch()">Lancer le pipeline →</button>
+            <button class="ghost-btn" onclick="resetAll()">Réinitialiser</button>
+            <div class="prog-wrap"><div class="prog-bar" id="prog-bar"></div></div>
+          </div>
+        </div>
+        <div class="results-area" id="results-area">
+          <div class="empty-msg" id="empty-msg"><div class="empty-icon">⚡</div>Lance le pipeline pour voir les 4 agents travailler en temps réel.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENTS -->
+  <div id="tab-agents" class="tab-panel">
+    <div class="cfg-intro"><strong>Comment ça marche :</strong> les cases agents sont vides au départ. Explore la bibliothèque ci-dessous, clique sur un prompt pour le lire, puis copie-colle le bon prompt dans le bon agent. Attention — certains prompts ne correspondent pas au workflow !</div>
+    <div class="agents-grid" id="agents-grid"></div>
+    <div class="lib-sep"><div class="lib-sep-line"></div><div class="lib-sep-txt">Bibliothèque de prompts</div><div class="lib-sep-line"></div></div>
+    <div class="lib-grid" id="lib-grid"></div>
+  </div>
+
+  <!-- RAG -->
+  <div id="tab-rag" class="tab-panel">
+    <div class="rag-intro"><strong>Comment ça marche :</strong> glisse les documents depuis la bibliothèque vers la zone RAG. Seuls les bons documents permettent au pipeline de fonctionner correctement. Les mauvais documents peuvent faire dérailler le système.</div>
+    <div class="rag-layout">
+      <div>
+        <div class="drop-zone-label">Base de connaissances (RAG)</div>
+        <div class="drop-zone" id="drop-zone" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+          <div class="drop-zone-empty" id="drop-empty">
+            <div class="drop-zone-icon">📂</div>
+            <div class="drop-zone-txt">Glisse ici les documents<br>pour constituer ta base RAG</div>
+            <div class="drop-zone-hint">Les agents puiseront dans ces documents</div>
+          </div>
+          <div id="dropped-docs"></div>
+        </div>
+        <div class="rag-stats" id="rag-stats"></div>
+        <button class="rag-clear-btn" onclick="clearRAG()" style="margin-top:10px;">Vider la base RAG</button>
+      </div>
+      <div>
+        <div class="lib-sep2"><div class="lib-sep-line"></div><div class="lib-sep-txt">Bibliothèque de fichiers</div><div class="lib-sep-line"></div></div>
+        <div class="doc-lib-list" id="doc-lib-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// DATA
+// ══════════════════════════════════════
+
+const PROMPT_LIBRARY = [
+  {
+    id:'p_entretien', name:"Préparateur d'entretien annuel", icon:'👥',
+    forAgent:null,
+    prompt:`Tu es assistant RH spécialisé dans l'accompagnement des managers.
+Ton rôle est d'aider à préparer les entretiens annuels d'évaluation.
+
+À partir des informations fournies sur le collaborateur, génère :
+- POINTS_FORTS : 3 réussites à valoriser
+- AXES_AMELIORATION : 2-3 points de progression
+- OBJECTIFS_PROPOSES : 3 objectifs SMART pour l'année suivante
+- QUESTIONS_A_POSER : 5 questions ouvertes pour animer l'entretien
+- POINTS_ATTENTION : sujets sensibles à aborder avec précaution
+
+Adapte le ton selon le niveau hiérarchique du collaborateur.`
+  },
+  {
+    id:'p_a2', name:'Contrôle documentaire', icon:'📋',
+    forAgent:2,
+    prompt:`Tu es gestionnaire administratif chez Format'Upgrade.
+Tu reçois la qualification d'une demande et le contenu des documents de référence.
+
+Règle absolue : ne jamais inventer une pièce présente si elle n'est pas explicitement mentionnée.
+
+Si PROFIL = demandeur_emploi → applique la checklist Profil A.
+Si PROFIL = salarié → applique la checklist Profil B.
+Si PROFIL = inconnu → liste les deux et demande une clarification.
+
+Produis :
+- PROFIL_CONFIRME
+- PIECES_PRESENTES : pièces probablement fournies
+- PIECES_MANQUANTES : pièces requises non fournies
+- PIECES_A_CLARIFIER : éléments incertains
+- STATUT_DOSSIER : incomplet / complet / à_clarifier`
+  },
+  {
+    id:'p_avis', name:'Réponse aux avis Google', icon:'⭐',
+    forAgent:null,
+    prompt:`Tu es chargé de la réputation en ligne d'une entreprise.
+Ton rôle est de rédiger des réponses professionnelles et empathiques aux avis Google laissés par les clients.
+
+Pour chaque avis reçu :
+- Si l'avis est positif : remercie chaleureusement, mentionne un détail personnalisé, invite à revenir.
+- Si l'avis est négatif : excuse-toi, propose une solution, invite à recontacter en privé.
+- Si l'avis est neutre : remercie et valorise les points positifs mentionnés.
+
+Ton ton doit toujours être : poli, professionnel, jamais défensif.
+Commence toujours par le prénom du client si disponible.
+Signe avec le nom de l'établissement.`
+  },
+  {
+    id:'p_a4', name:'Supervision qualité', icon:'✅',
+    forAgent:4,
+    prompt:`Tu es superviseur qualité chez Format'Upgrade.
+Évalue la réponse de l'Agent 3 sur 10 selon ces critères :
+
+1. Complétude : toutes les questions ont une réponse ? (0-2 pts)
+2. Cohérence : cohérent avec le profil et les pièces manquantes ? (0-2 pts)
+3. Ton : professionnel et chaleureux ? (0-2 pts)
+4. Exactitude : aucune information inventée ? (0-2 pts)
+5. Clarté : instructions claires pour la suite ? (0-2 pts)
+
+Réponds sous ce format :
+SCORE: X/10
+VERDICT: PRET_A_ENVOYER ou VALIDATION_HUMAINE_REQUISE
+POINTS_FORTS: (2-3 points)
+POINTS_A_CORRIGER: (si applicable)
+DECISION: justification en 1 phrase`
+  },
+  {
+    id:'p_a1', name:'Qualification de demande', icon:'🔍',
+    forAgent:1,
+    prompt:`Tu es assistant d'accueil administratif chez Format'Upgrade, organisme de formation spécialisé en IA.
+Analyse le message entrant et produis une qualification structurée.
+
+Identifie :
+- CATEGORIE : inscription / devis / information / autre
+- PROFIL : salarié / demandeur_emploi / inconnu
+- NIVEAU_SUGGERE : Novice / Débutant / Intermédiaire / Avancé / Expert
+- FINANCEMENT_PROBABLE : CPF / AIF_France_Travail / OPCO / autofinancement / inconnu
+- DONNEES_MANQUANTES : informations absentes du message
+- URGENCE : faible / normale / élevée
+- RESUME : résumé en 2 phrases maximum
+
+Réponds UNIQUEMENT sous ce format structuré, sans introduction ni conclusion.`
+  },
+  {
+    id:'p_devis', name:'Analyseur de devis fournisseur', icon:'📊',
+    forAgent:null,
+    prompt:`Tu es assistant achats dans une entreprise.
+Ton rôle est d'analyser les devis reçus de fournisseurs et de produire une synthèse structurée.
+
+Pour chaque devis, identifie :
+- NOM_FOURNISSEUR : nom de l'entreprise émettrice
+- DATE_DEVIS : date d'émission
+- MONTANT_HT : total hors taxes
+- MONTANT_TTC : total toutes taxes comprises
+- DELAI_LIVRAISON : délai annoncé
+- CONDITIONS_PAIEMENT : modalités de paiement
+- POINTS_VIGILANCE : clauses inhabituelles ou risquées
+- RECOMMANDATION : accepter / négocier / refuser
+
+Fournis une note de synthèse en 3 lignes maximum.`
+  },
+  {
+    id:'p_a3', name:'Rédaction administrative', icon:'✍️',
+    forAgent:3,
+    prompt:`Tu es assistant de rédaction administrative chez Format'Upgrade.
+Rédige un email de réponse professionnel, chaleureux et précis.
+
+L'email doit :
+- Accueillir la demande et remercier le candidat
+- Répondre à CHAQUE question posée dans le message
+- Indiquer le niveau recommandé avec justification
+- Expliquer le financement probable et les démarches
+- Lister clairement les pièces manquantes
+- Inclure un devis indicatif si une demande de prix est mentionnée
+- Proposer un contact pour la suite
+
+Ne jamais inventer d'informations non présentes dans la qualification.
+Signer : L'équipe Format'Upgrade — contact@formatupgrade.fr`
+  }
+];
+
+const DOC_LIBRARY = [
+  {
+    id:'doc_fournitures', name:'Liste fournitures bureau', icon:'📄', type:'bad',
+    content:`LISTE DE FOURNITURES DE BUREAU — COMMANDE T2 2025
+
+Stylos bille bleu (boîte de 50) — Réf. STY-001 — Qté : 3 boîtes
+Stylos bille noir (boîte de 50) — Réf. STY-002 — Qté : 2 boîtes
+Ramettes A4 80g (paquet de 500) — Réf. PAP-A4-80 — Qté : 10 paquets
+Chemises cartonnées bleues (boîte de 100) — Réf. CHE-001 — Qté : 2 boîtes
+Post-it 76x76mm jaune (lot de 12) — Réf. POST-J — Qté : 4 lots
+Agrafeuses bureau (modèle standard) — Réf. AGR-STD — Qté : 5
+Agrafes 26/6 (boîte de 1000) — Réf. AGR-26 — Qté : 10 boîtes
+Toner imprimante HP LaserJet — Réf. TON-HP-B — Qté : 4
+Marqueurs permanents noirs (lot de 12) — Réf. MAR-001 — Qté : 2 lots
+Correcteurs liquides (lot de 10) — Réf. COR-001 — Qté : 3 lots
+Ciseaux de bureau — Réf. CIS-001 — Qté : 8
+Trombones (boîte de 100) — Réf. TRO-001 — Qté : 5 boîtes
+
+TOTAL ESTIMÉ : 342,80 € HT
+FOURNISSEUR : Bureau Direct SAS
+DÉLAI DE LIVRAISON : 3-5 jours ouvrés`
+  },
+  {
+    id:'doc_charte', name:'Charte & Règlement', icon:'📄', type:'ok',
+    content:`FORMAT'UPGRADE — CHARTE & RÈGLEMENT INTÉRIEUR
+
+Article 3 — Engagements Format'Upgrade :
+- Délivrer des formations conformes aux programmes
+- Remettre une attestation de formation à l'issue de chaque parcours
+- Respecter la confidentialité des données personnelles (RGPD)
+- Répondre à toute demande dans un délai de 48h ouvrées
+
+Article 4 — Obligations du stagiaire :
+- Participer activement et assidûment à toutes les sessions
+- Respecter les horaires définis dans la convention
+- Prévenir Format'Upgrade en cas d'absence
+- Fournir des informations exactes lors de l'inscription
+
+Article 5 — Absences :
+- Absence prévue : informer 48h à l'avance par email
+- Absence imprévisible : informer le jour même avant 9h
+- Absence injustifiée : signalement au financeur, déduction possible`
+  },
+  {
+    id:'doc_bilan', name:'Bilan financier 2025', icon:'📄', type:'bad',
+    content:`BILAN FINANCIER ANNUEL 2025 — CONFIDENTIEL
+
+COMPTE DE RÉSULTAT SIMPLIFIÉ
+
+PRODUITS :
+Chiffre d'affaires formations : 284 500 €
+Subventions reçues : 12 000 €
+Produits financiers : 3 200 €
+TOTAL PRODUITS : 299 700 €
+
+CHARGES :
+Salaires et charges sociales : 142 000 €
+Loyers et charges locatives : 28 800 €
+Achats matériels pédagogiques : 14 200 €
+Frais informatiques et logiciels : 8 600 €
+Frais de communication : 6 400 €
+Honoraires experts-comptables : 4 800 €
+Frais divers de gestion : 3 900 €
+TOTAL CHARGES : 208 700 €
+
+RÉSULTAT NET AVANT IMPÔT : 91 000 €
+Impôt sur les sociétés (25%) : 22 750 €
+RÉSULTAT NET : 68 250 €
+
+TRÉSORERIE AU 31/12/2025 : 124 300 €
+CAPITAL SOCIAL : 10 000 €`
+  },
+  {
+    id:'doc_referentiel', name:'Référentiel documentaire', icon:'📄', type:'ok',
+    content:`FORMAT'UPGRADE — RÉFÉRENTIEL DOCUMENTAIRE
+
+PROFIL A — DEMANDEUR D'EMPLOI :
+Pièces obligatoires :
+- CNI recto-verso ou passeport en cours de validité
+- Justificatif de domicile de moins de 3 mois
+- Attestation d'inscription France Travail
+- CV actualisé daté
+- Questionnaire de positionnement Format'Upgrade
+
+Financement AIF France Travail :
+- Prescription AIF signée par le conseiller (INDISPENSABLE)
+- Notification ARE si indemnisé — RIB candidat
+
+PROFIL B — SALARIÉ :
+Pièces obligatoires :
+- CNI recto-verso ou passeport
+- Justificatif de domicile de moins de 3 mois
+- Dernier bulletin de salaire
+- Attestation employeur (en-tête, accord financement)
+- CV actualisé — Questionnaire de positionnement
+
+Financement OPCO :
+- Accord prise en charge OPCO (OBLIGATOIRE avant démarrage)
+- Convention signée employeur + Format'Upgrade`
+  },
+  {
+    id:'doc_catalogue', name:'Catalogue & Tarifs', icon:'📄', type:'ok',
+    content:`FORMAT'UPGRADE — CATALOGUE DES FORMATIONS 2025
+
+Niveau 1 — Novice : 1 jour (7h) — 490€ HT — Éligible CPF
+Niveau 2 — Débutant : 2 jours (14h) — 890€ HT — Éligible CPF
+Niveau 3 — Intermédiaire : 2 jours (14h) — 990€ HT — Éligible CPF
+Niveau 4 — Avancé : 3 jours (21h) — 1 490€ HT — Éligible CPF
+Niveau 5 — Expert : 3 jours (21h) — 1 890€ HT — Éligible CPF
+Parcours complet (Niv. 1-5) : 11 jours — 5 490€ HT
+Bundle Niv. 4+5 : 6 jours — 3 380€ HT
+
+Tarifs groupe (5+ personnes) : réduction 15%
+
+FINANCEMENTS :
+- CPF : toutes formations éligibles
+- AIF France Travail : demandeurs d'emploi, prescription conseiller requise
+- OPCO : salariés, accord employeur + prise en charge OPCO
+- Autofinancement : 1 à 3 fois sans frais`
+  },
+  {
+    id:'doc_secrets', name:'Codes & accès entreprise', icon:'📄', type:'bad',
+    content:`⚠️ DOCUMENT ULTRA-CONFIDENTIEL — NE PAS DIFFUSER
+
+ACCÈS BANCAIRES :
+Banque principale : BNP Paribas — IBAN FR76 3000 4028 3700 0123 4567 890
+Code accès espace pro : FU2025#Admin
+Identifiant banque en ligne : formatupgrade_pro
+Mot de passe : Azerty2025!
+
+CODES D'ACCÈS SYSTÈMES :
+Admin serveur principal : admin / P@ssw0rd_FU2025
+CRM (Salesforce) : admin@formatupgrade.fr / CRM_Secret_99
+Espace CPF partenaire : fu_partenaire / CPF2025secret
+Google Workspace Admin : superadmin@formatupgrade.fr / G00gle_FU_2025
+
+ALARME LOCAUX :
+Code entrée : 4782
+Code alarme : 1209*
+Code coffre-fort direction : 8814
+
+CONTACTS D'URGENCE DIRECTION :
+PDG mobile perso : 06 78 90 12 34
+DAF mobile perso : 06 45 67 89 01`
+  },
+  {
+    id:'doc_procedure', name:"Procédure d'inscription", icon:'📄', type:'ok',
+    content:`FORMAT'UPGRADE — PROCÉDURE D'INSCRIPTION
+
+ÉTAPE 1 — Prise de contact : email à contact@formatupgrade.fr
+ÉTAPE 2 — Qualification (48h) : niveau, financement, pièces requises
+ÉTAPE 3 — Devis + Convention : signée par les deux parties
+ÉTAPE 4 — Dossier documentaire : transmission des pièces
+ÉTAPE 5 — Validation : vérification + confirmation financement
+ÉTAPE 6 — Confirmation : convocation + accès formation
+
+DÉLAIS :
+- Dossier complet : J-21 recommandé
+- Convention signée : J-15
+- CPF : minimum J-11 (délai légal)
+- OPCO : accord J-21 avant démarrage`
+  }
+];
+
+// Agent state
+let agentPrompts = {1:'', 2:'', 3:'', 4:''};
+let ragDocs = [];
+let running = false;
+let draggedDocId = null;
+
+// ══════════════════════════════════════
+// SPLASH
+// ══════════════════════════════════════
+function startApp() {
+  document.getElementById('splash').classList.add('out');
+  const app = document.getElementById('app');
+  app.style.display = 'block';
+  setTimeout(() => app.classList.add('in'), 50);
+  setTimeout(() => document.getElementById('splash').style.display = 'none', 600);
+}
+
+// ══════════════════════════════════════
+// TABS
+// ══════════════════════════════════════
+function switchTab(id) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['sim','agents','rag'][i] === id));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+}
+
+// ══════════════════════════════════════
+// AGENTS GRID
+// ══════════════════════════════════════
+function buildAgentsGrid() {
+  const names = ['', 'Qualification', 'Contrôle docs', 'Rédaction', 'Supervision'];
+  const subs = ['', 'Analyse la demande entrante', 'Vérifie les pièces selon le profil', "Rédige l'email de réponse", 'Évalue la qualité de la réponse'];
+  const icons = ['', 'ni-a1', 'ni-a2', 'ni-a3', 'ni-a4'];
+  const badges = ['', 'A1', 'A2', 'A3', 'A4'];
+  const g = document.getElementById('agents-grid');
+  g.innerHTML = '';
+  [1,2,3,4].forEach(i => {
+    const d = document.createElement('div');
+    d.className = 'acfg';
+    d.innerHTML = `
+      <div class="acfg-hdr">
+        <div class="node-icon ${icons[i]}" style="width:28px;height:28px;font-size:11px;font-weight:600;">${badges[i]}</div>
+        <div><div class="acfg-title">Agent ${i} — ${names[i]}</div><div class="acfg-sub">${subs[i]}</div></div>
+      </div>
+      <textarea class="acfg-ta" id="pta${i}" placeholder="Colle ici le prompt de cet agent depuis la bibliothèque ci-dessous...">${agentPrompts[i]}</textarea>
+      <div class="acfg-footer">
+        <span class="acfg-hint" id="acfg-hint${i}">${agentPrompts[i] ? detectPromptStatus(i, agentPrompts[i]) : 'Case vide — agent inactif'}</span>
+        <button class="acfg-clear" onclick="clearAgent(${i})">✕ Vider</button>
+      </div>
+    `;
+    g.appendChild(d);
+    const ta = document.getElementById('pta' + i);
+    ta.addEventListener('input', () => {
+      agentPrompts[i] = ta.value;
+      updateAgentStyle(i);
+    });
+    updateAgentStyle(i);
+  });
+}
+
+function detectPromptStatus(agentIdx, text) {
+  if (!text.trim()) return 'Case vide — agent inactif';
+  const p = PROMPT_LIBRARY.find(x => text.trim() === x.prompt.trim());
+  if (!p) return '⚠️ Prompt non reconnu — résultats imprévisibles';
+  if (p.forAgent === agentIdx) return '✓ Prompt correct pour cet agent';
+  if (p.forAgent !== null) return `⚠️ Prompt de l'Agent ${p.forAgent} collé dans l'Agent ${agentIdx} — erreur de placement`;
+  return `⚠️ Prompt hors workflow (${p.name}) — cet agent va dérailler`;
+}
+
+function updateAgentStyle(i) {
+  const ta = document.getElementById('pta' + i);
+  const hint = document.getElementById('acfg-hint' + i);
+  if (!ta) return;
+  agentPrompts[i] = ta.value;
+  ta.classList.remove('has-content');
+  if (ta.value.trim()) {
+    ta.classList.add('has-content');
+    hint.textContent = 'Prompt chargé';
+  } else {
+    hint.textContent = 'Case vide — agent inactif';
+  }
+}
+
+function clearAgent(i) {
+  agentPrompts[i] = '';
+  const ta = document.getElementById('pta' + i);
+  if (ta) { ta.value = ''; ta.classList.remove('has-prompt','has-wrong'); }
+  const hint = document.getElementById('acfg-hint' + i);
+  if (hint) hint.textContent = 'Case vide — agent inactif';
+}
+
+// ══════════════════════════════════════
+// PROMPT LIBRARY
+// ══════════════════════════════════════
+function buildLibGrid() {
+  const g = document.getElementById('lib-grid');
+  g.innerHTML = '';
+  PROMPT_LIBRARY.forEach(p => {
+    const d = document.createElement('div');
+    d.className = 'lib-item';
+    d.innerHTML = `
+      <div class="lib-item-hdr" onclick="toggleLibItem('${p.id}')">
+        <div class="lib-item-icon" style="background:var(--surface2)">${p.icon}</div>
+        <div class="lib-item-name">${p.name}</div>
+        <span class="lib-item-tag">Voir le prompt ▾</span>
+      </div>
+      <div class="lib-item-body" id="lib-body-${p.id}">
+        <div class="lib-item-prompt">${p.prompt}</div>
+        <button class="lib-copy-btn" onclick="copyPrompt('${p.id}')">Copier le prompt</button>
+      </div>
+    `;
+    g.appendChild(d);
+  });
+}
+
+function toggleLibItem(id) {
+  const b = document.getElementById('lib-body-' + id);
+  b.classList.toggle('open');
+  const hdr = b.previousElementSibling;
+  const tag = hdr.querySelector('.lib-item-tag');
+  if (tag) tag.textContent = b.classList.contains('open') ? 'Masquer ▴' : 'Voir le prompt ▾';
+}
+
+function copyPrompt(id) {
+  const p = PROMPT_LIBRARY.find(x => x.id === id);
+  if (!p) return;
+  navigator.clipboard.writeText(p.prompt).then(() => {
+    const btn = document.querySelector(`#lib-body-${id} .lib-copy-btn`);
+    btn.textContent = 'Copié !';
+    setTimeout(() => { btn.textContent = 'Copier le prompt'; }, 2000);
+  });
+}
+
+// ══════════════════════════════════════
+// RAG / DRAG & DROP
+// ══════════════════════════════════════
+function buildDocLib() {
+  const list = document.getElementById('doc-lib-list');
+  list.innerHTML = '';
+  DOC_LIBRARY.forEach(doc => {
+    const d = document.createElement('div');
+    d.className = 'doc-lib-item';
+    d.draggable = true;
+    d.id = 'doclib-' + doc.id;
+    d.innerHTML = `
+      <div class="doc-lib-hdr">
+        <span class="doc-lib-icon">${doc.icon}</span>
+        <span class="doc-lib-name">${doc.name}</span>
+        <button class="doc-expand-btn" id="expand-btn-${doc.id}" onclick="toggleDocLib('${doc.id}',event)">Lire ▾</button>
+      </div>
+      <div class="doc-lib-body" id="doclib-body-${doc.id}">
+        <div class="doc-lib-content">${doc.content}</div>
+        <div class="doc-drag-hint">↖ Glisse ce document vers la zone RAG</div>
+      </div>
+    `;
+    d.addEventListener('dragstart', e => {
+      draggedDocId = doc.id;
+      e.dataTransfer.effectAllowed = 'copy';
+    });
+    list.appendChild(d);
+  });
+}
+
+function toggleDocLib(id, event) {
+  event.stopPropagation();
+  const b = document.getElementById('doclib-body-' + id);
+  b.classList.toggle('open');
+  const btn = document.getElementById('expand-btn-' + id);
+  if (btn) btn.textContent = b.classList.contains('open') ? 'Masquer ▴' : 'Lire ▾';
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+  document.getElementById('drop-zone').classList.add('drag-over');
+}
+
+function onDragLeave(e) {
+  document.getElementById('drop-zone').classList.remove('drag-over');
+}
+
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  if (!draggedDocId) return;
+  if (ragDocs.find(d => d.id === draggedDocId)) { draggedDocId = null; return; }
+  const doc = DOC_LIBRARY.find(d => d.id === draggedDocId);
+  if (!doc) { draggedDocId = null; return; }
+  ragDocs.push(doc);
+  renderDroppedDocs();
+  draggedDocId = null;
+}
+
+function removeRAGDoc(id) {
+  ragDocs = ragDocs.filter(d => d.id !== id);
+  renderDroppedDocs();
+}
+
+function clearRAG() {
+  ragDocs = [];
+  renderDroppedDocs();
+}
+
+function renderDroppedDocs() {
+  const container = document.getElementById('dropped-docs');
+  const empty = document.getElementById('drop-empty');
+  container.innerHTML = '';
+  if (ragDocs.length === 0) {
+    empty.style.display = 'flex';
+  } else {
+    empty.style.display = 'none';
+    ragDocs.forEach(doc => {
+      const chip = document.createElement('div');
+      chip.className = 'rag-doc-chip';
+      chip.innerHTML = `<span class="rag-doc-chip-icon">${doc.icon}</span><span class="rag-doc-chip-name">${doc.name}</span><button class="rag-doc-remove" onclick="removeRAGDoc('${doc.id}')">✕</button>`;
+      container.appendChild(chip);
+    });
+  }
+  updateRAGStats();
+}
+
+function updateRAGStats() {
+  const stats = document.getElementById('rag-stats');
+  stats.innerHTML = '';
+  if (ragDocs.length === 0) return;
+  const s1 = document.createElement('span');
+  s1.className = 'rag-stat rag-stat-neutral';
+  s1.textContent = `${ragDocs.length} document${ragDocs.length > 1 ? 's' : ''} dans la base RAG`;
+  stats.appendChild(s1);
+}
+
+// ══════════════════════════════════════
+// EMAIL PRESETS
+// ══════════════════════════════════════
+const CA = {
+  from:'lucas.fontaine.pro@gmail.com', subj:"Demande d'inscription formation IA + devis",
+  body:`Bonjour,
+
+Je me permets de vous contacter car je suis intéressé par vos formations sur l'intelligence artificielle.
+
+En ce moment je suis sans emploi depuis environ 8 mois, suite à une rupture conventionnelle avec mon ancien employeur dans le secteur de la logistique. Je suis suivi par France Travail mais je ne sais pas trop comment ça fonctionne pour le financement des formations.
+
+J'ai vu sur votre site que vous proposez plusieurs niveaux, je pense que je suis plutôt débutant voire intermédiaire — j'utilise parfois ChatGPT pour des trucs perso mais jamais dans un contexte professionnel.
+
+Pourriez-vous me dire :
+- Quel niveau me conviendrait le mieux selon mon profil ?
+- Est-ce que la formation est prise en charge ?
+- Combien ça coûte si je dois payer une partie ?
+
+Je vous joins mon CV.
+
+Bien cordialement,
+Lucas Fontaine — 06 12 34 56 78`
+};
+
+const CB = {
+  from:'s.mercier@cabinet-rh-solaris.fr', subj:"Formation IA Niveau Avancé — inscription + devis",
+  body:`Bonjour,
+
+Je suis responsable RH dans un cabinet de conseil (environ 45 salariés) et je cherche à me former sérieusement à l'IA. J'utilise Claude et ChatGPT au quotidien depuis plus d'un an, j'ai déjà créé des GPT personnalisés et j'automatise certaines tâches RH avec des outils no-code.
+
+Le Niveau 4 (Avancé) me semble correspondre à là où j'en suis, peut-être même le Niveau 5.
+
+Quelques questions :
+1. Le Niveau 4 est-il accessible directement ?
+2. Mon employeur est d'accord pour financer — devis pour Niveau 4 et bundle Niv. 4+5 ?
+3. Vos formations passent-elles par un OPCO ou peut-on aussi payer via CPF ?
+4. Y a-t-il des sessions en mai ou juin 2025 ?
+
+Bien cordialement,
+Sophie Mercier — Responsable RH, Cabinet Solaris`
+};
+
+function loadC(t) {
+  const c = t === 'A' ? CA : CB;
+  document.getElementById('efrom').value = c.from;
+  document.getElementById('esubj').value = c.subj;
+  document.getElementById('ebody').value = c.body;
+}
+
+function clearEmail() {
+  ['efrom','esubj','ebody'].forEach(id => document.getElementById(id).value = '');
+}
+
+// ══════════════════════════════════════
+// PIPELINE UTILS
+// ══════════════════════════════════════
+function setNode(id, state, st) {
+  const n = document.getElementById('node-' + id);
+  n.className = 'pipe-node state-' + state;
+  document.getElementById('st-' + id).textContent = st;
+}
+
+function setConn(id, cls) {
+  const c = document.getElementById('conn-' + id);
+  if (c) c.className = 'pipe-conn' + (cls ? ' ' + cls : '');
+}
+
+function setProg(p) { document.getElementById('prog-bar').style.width = p + '%'; }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function mkCard(id, badge, bc, title) {
+  const d = document.createElement('div');
+  d.className = 'rc';
+  d.id = 'rc-' + id;
+  d.innerHTML = `
+    <div class="rc-hdr" onclick="toggleCard('${id}')">
+      <div class="rc-badge ${bc}" style="font-size:10px;font-weight:600;">${badge}</div>
+      <div class="rc-title">${title}</div>
+      <span class="rc-chip chip-idle" id="chip-${id}">En attente</span>
+      <span class="chevron open" id="chev-${id}">▾</span>
+    </div>
+    <div class="rc-body open" id="body-${id}">
+      <div class="rc-content" id="cnt-${id}"></div>
+    </div>
+  `;
+  return d;
+}
+
+function toggleCard(id) {
+  document.getElementById('body-' + id).classList.toggle('open');
+  document.getElementById('chev-' + id).classList.toggle('open');
+}
+
+function setChip(id, cls, txt) {
+  const c = document.getElementById('chip-' + id);
+  c.className = 'rc-chip chip-' + cls;
+  c.textContent = txt;
+}
+
+async function stream(id, text, ms=8) {
+  const el = document.getElementById('cnt-' + id);
+  el.className = 'rc-content streaming';
+  el.textContent = '';
+  for (let i = 0; i < text.length; i++) {
+    el.textContent += text[i];
+    if (i % 4 === 0) await sleep(ms);
+  }
+  el.className = 'rc-content';
+}
+
+// ══════════════════════════════════════
+// PROMPT ANALYSIS
+// ══════════════════════════════════════
+function getPromptType(agentIdx) {
+  const text = agentPrompts[agentIdx];
+  if (!text || !text.trim()) return 'empty';
+  const p = PROMPT_LIBRARY.find(x => text.trim() === x.prompt.trim());
+  if (!p) return 'unknown';
+  if (p.forAgent === agentIdx) return 'correct';
+  if (p.id === 'p_avis') return 'avis_google';
+  if (p.id === 'p_devis') return 'analyseur_devis';
+  if (p.id === 'p_entretien') return 'entretien';
+  if (p.forAgent !== null && p.forAgent !== agentIdx) return 'wrong_agent_' + p.forAgent;
+  return 'wrong';
+}
+
+function getRAGType() {
+  const goodDocs = ['doc_charte','doc_catalogue','doc_procedure','doc_referentiel'];
+  const hasGood = ragDocs.some(d => goodDocs.includes(d.id));
+  const hasBad = ragDocs.some(d => d.type === 'bad');
+  const hasSecrets = ragDocs.some(d => d.id === 'doc_secrets');
+  const hasBudget = ragDocs.some(d => d.id === 'doc_bilan');
+  const hasSupplies = ragDocs.some(d => d.id === 'doc_fournitures');
+  return { hasGood, hasBad, hasSecrets, hasBudget, hasSupplies, empty: ragDocs.length === 0 };
+}
+
+// ══════════════════════════════════════
+// DETECTION HELPERS
+// ══════════════════════════════════════
+function detectProf(b) {
+  const bl = b.toLowerCase();
+  const de = ['france travail','pôle emploi','sans emploi','rupture conventionnelle','chômage','allocation'];
+  const sal = ['salarié','employeur','entreprise','opco','cabinet','responsable'];
+  let ds = 0, ss = 0;
+  de.forEach(k => { if (bl.includes(k)) ds++; });
+  sal.forEach(k => { if (bl.includes(k)) ss++; });
+  if (ds > ss) return 'demandeur_emploi';
+  if (ss > ds) return 'salarié';
+  return 'inconnu';
+}
+
+function detectLvl(b) {
+  const bl = b.toLowerCase();
+  if (bl.includes('niveau 5')||bl.includes('expert')) return 'Expert';
+  if (bl.includes('niveau 4')||bl.includes('avancé')||bl.includes('avance')||bl.includes('no-code')||bl.includes('gpt personnalis')) return 'Avancé';
+  if (bl.includes('niveau 3')||bl.includes('intermédiaire')) return 'Intermédiaire';
+  if (bl.includes('niveau 2')||bl.includes('débutant')||bl.includes('chatgpt')||bl.includes('claude')) return 'Débutant';
+  return 'Novice';
+}
+
+function detectQ(b) {
+  const bl = b.toLowerCase(); const q = [];
+  if (bl.includes('devis')||bl.includes('tarif')||bl.includes('prix')||bl.includes('combien')) q.push('devis/tarif');
+  if (bl.includes('financ')||bl.includes('pris en charge')) q.push('financement');
+  if (bl.includes('niveau')||bl.includes('adapté')||bl.includes('correspond')) q.push('niveau adapté');
+  if (bl.includes('session')||bl.includes('date')||bl.includes('quand')||bl.includes('mai')||bl.includes('juin')) q.push('dates/sessions');
+  if (bl.includes('prérequis')||bl.includes('accessible')) q.push('prérequis');
+  return q.length > 0 ? q : ['informations générales'];
+}
+
+function getPiecesDE(b) {
+  const bl = b.toLowerCase(); const m = [];
+  if (!bl.includes('cni')&&!bl.includes('passeport')) m.push("CNI recto-verso ou passeport (non transmis)");
+  if (!bl.includes('domicile')) m.push("Justificatif de domicile de moins de 3 mois (non transmis)");
+  m.push("Attestation d'inscription France Travail avec numéro identifiant");
+  m.push("Prescription AIF signée par le conseiller France Travail (INDISPENSABLE)");
+  if (!bl.includes('cv')) m.push("CV actualisé daté (non transmis)");
+  m.push("Questionnaire de positionnement Format'Upgrade (à envoyer)");
+  m.push("Notification ARE / droits ouverts (à préciser)");
+  return m;
+}
+
+function getPiecesSal() {
+  return [
+    "CNI recto-verso ou passeport (non transmis)",
+    "Justificatif de domicile de moins de 3 mois (non transmis)",
+    "Dernier bulletin de salaire (non transmis)",
+    "Attestation employeur sur papier en-tête (non transmise)",
+    "Accord de prise en charge OPCO (OPCO de branche à identifier)",
+    "Questionnaire de positionnement Format'Upgrade (à envoyer)"
+  ];
+}
+
+const LVS = {
+  'Novice':{price:'490€ HT',dur:'1 jour (7h)'},
+  'Débutant':{price:'890€ HT',dur:'2 jours (14h)'},
+  'Intermédiaire':{price:'990€ HT',dur:'2 jours (14h)'},
+  'Avancé':{price:'1 490€ HT',dur:'3 jours (21h)'},
+  'Expert':{price:'1 890€ HT',dur:'3 jours (21h)'}
+};
+
+function buildDraft(prof, lvl, qs, pieces, from, fin) {
+  const raw = from.split('@')[0].split('.')[0];
+  const prenom = raw.charAt(0).toUpperCase() + raw.slice(1);
+  const lv = LVS[lvl] || LVS['Débutant'];
+  let e = `Bonjour ${prenom},\n\nMerci pour votre message et l'intérêt que vous portez aux formations Format'Upgrade !\n\n`;
+  if (qs.includes('niveau adapté')||qs.includes('prérequis'))
+    e += `NIVEAU RECOMMANDÉ\nSur la base de votre profil, nous vous recommandons le Niveau ${lvl} (${lv.dur}).\n\n`;
+  if (qs.includes('devis/tarif')||qs.includes('financement')) {
+    e += `TARIF & FINANCEMENT\n— Niveau ${lvl} : ${lv.price} par participant\n`;
+    if (lvl==='Avancé') e += `— Bundle Niveaux 4+5 : 3 380€ HT (6 jours)\n`;
+    e += `\nFinancement probable : ${fin}.\n\n`;
+  }
+  if (prof==='demandeur_emploi')
+    e += `DÉMARCHES AIF\n1. Présentez ce projet à votre conseiller France Travail\n2. Demandez une prescription AIF (obligatoire)\n3. Transmettez-nous cette prescription avec votre dossier\n\n`;
+  else if (prof==='salarié')
+    e += `DÉMARCHES OPCO\n1. Confirmez l'accord écrit de votre employeur\n2. Identifiez votre OPCO de branche\n3. Déposez le dossier à l'OPCO 3 semaines avant\n\n`;
+  if (pieces.length > 0) {
+    e += `DOCUMENTS À TRANSMETTRE\n`;
+    pieces.forEach(p => { e += `  — ${p}\n`; });
+    e += `\nTransmission : inscription@formatupgrade.fr\n\n`;
+  }
+  if (qs.includes('dates/sessions')) e += `PROCHAINES SESSIONS\nSessions disponibles en mai et juin 2025. Contactez-nous pour réserver.\n\n`;
+  e += `Nous restons disponibles pour tout renseignement.\n\nBien cordialement,\nL'équipe Format'Upgrade\ncontact@formatupgrade.fr`;
+  return e;
+}
+
+// ══════════════════════════════════════
+// AGENT RESPONSE GENERATORS
+// Each returns a string based on prompt type
+// ══════════════════════════════════════
+
+function genA1(promptType, body, from, prof, lvl, qs, fin) {
+  switch(promptType) {
+    case 'empty':
+      return `⚠️ AGENT INACTIF — Aucun prompt configuré.\nCet agent ne peut pas traiter la demande.\nImpact : toute la chaîne est bloquée.`;
+    case 'correct':
+      let r = `CATEGORIE : inscription${qs.includes('devis/tarif')?' + devis':''}${qs.includes('financement')?' + financement':''}\nPROFIL : ${prof}\nNIVEAU_SUGGERE : ${lvl}\nFINANCEMENT_PROBABLE : ${fin}\nDONNEES_MANQUANTES : ${prof==='demandeur_emploi'?'Attestation France Travail, prescription AIF':prof==='salarié'?'Attestation employeur, accord OPCO':'Statut professionnel non précisé'}\nURGENCE : normale\nRESUME : Demande d'inscription de ${from||'candidat'} pour une formation IA Niveau ${lvl}. Questions : ${qs.join(', ')}.`;
+      return r;
+    case 'avis_google':
+      return `Bonjour !\n\nMerci pour votre avis et le temps que vous nous avez accordé.\n\nNous sommes ravis que votre expérience ait été positive. Votre satisfaction est notre priorité et c'est exactement ce que notre équipe s'efforce d'accomplir chaque jour.\n\nNous espérons vous revoir très prochainement !\n\nCordialement,\nL'équipe Format'Upgrade\n\n⚠️ [ERREUR PIPELINE] : L'Agent 1 a reçu un prompt "Réponse aux avis Google". Il répond comme s'il traitait un avis client au lieu de qualifier une demande d'inscription. Toute la chaîne est compromise.`;
+    case 'analyseur_devis':
+      return `ANALYSE DEVIS REÇU\n\nNOM_FOURNISSEUR : Expéditeur non identifié comme fournisseur\nDATE_DEVIS : Non renseignée\nMONTANT_HT : Non renseigné\nMONTANT_TTC : Non renseigné\nDELAI_LIVRAISON : Non mentionné\nCONDITIONS_PAIEMENT : Inconnues\nPOINTS_VIGILANCE : Document ne correspond pas à un devis fournisseur standard\nRECOMMANDATION : Refuser — document non conforme\n\n⚠️ [ERREUR PIPELINE] : L'Agent 1 a reçu un prompt "Analyseur de devis". Il traite la demande comme un devis fournisseur. La qualification de l'inscription est impossible.`;
+    case 'entretien':
+      return `PRÉPARATION ENTRETIEN ANNUEL\n\nPOINTS_FORTS :\n— Prise d'initiative dans la démarche de formation\n— Intérêt marqué pour les nouvelles technologies\n— Démarche proactive de développement personnel\n\nAXES_AMELIORATION :\n— Formaliser les compétences numériques acquises\n— Structurer un plan de développement professionnel\n\nOBJECTIFS_PROPOSES :\n— Valider une certification IA avant fin 2025\n— Intégrer les outils IA dans les processus quotidiens\n— Former 2 collègues aux bases de l'IA\n\n⚠️ [ERREUR PIPELINE] : L'Agent 1 a reçu un prompt "Préparateur d'entretien annuel". Il traite la demande comme une préparation d'entretien RH au lieu de qualifier l'inscription.`;
+    default:
+      if (promptType.startsWith('wrong_agent_')) {
+        const src = promptType.replace('wrong_agent_', '');
+        return `⚠️ ERREUR DE PLACEMENT — Ce prompt appartient à l'Agent ${src}.\nL'Agent 1 ne sait pas comment interpréter ces instructions.\nRésultat : qualification impossible, pipeline bloqué dès la première étape.`;
+      }
+      return `⚠️ Prompt non reconnu — résultat imprévisible.\nL'agent produit une réponse générique sans structure.\n\nRésumé brut : message reçu de ${from||'inconnu'}, contenu analysé partiellement.`;
+  }
+}
+
+function genA2(promptType, a1Output, body, prof, ragInfo) {
+  switch(promptType) {
+    case 'empty':
+      return `⚠️ AGENT INACTIF — Aucun prompt configuré.\nLe contrôle documentaire est impossible.\nImpact : l'Agent 3 ne pourra pas lister les pièces manquantes.`;
+    case 'correct': {
+      if (ragInfo.empty)
+        return `⚠️ AVERTISSEMENT — Base RAG vide.\nAucun document de référence disponible.\n\nPROFIL_CONFIRME : ${prof}\nPIECES_MANQUANTES : Impossible à déterminer sans référentiel\nSTATUT_DOSSIER : à_clarifier\n\n→ Charger les documents dans l'onglet "Base documentaire (RAG)".`;
+      if (ragInfo.hasSecrets && ragInfo.hasBad)
+        return `⚠️ ALERTE SÉCURITÉ — Document "Codes & accès entreprise" détecté dans la base RAG.\n\nL'agent a extrait les informations suivantes du contexte :\n— IBAN : FR76 3000 4028 3700 0123 4567 890\n— Mot de passe serveur : P@ssw0rd_FU2025\n— Code alarme : 1209*\n\n⛔ DONNÉES SENSIBLES EXPOSÉES AU PIPELINE. Ce document ne doit jamais figurer dans une base RAG accessible à un agent IA automatisé.\n\nSTATUT_DOSSIER : compromis — arrêt recommandé`;
+      if (ragInfo.hasBad && !ragInfo.hasSecrets) {
+        let warn = `⚠️ Documents non pertinents détectés dans la base RAG :\n`;
+        if (ragInfo.hasSupplies) warn += `— "Liste de fournitures bureau" : aucun lien avec les dossiers d'inscription\n`;
+        if (ragInfo.hasBudget) warn += `— "Bilan financier 2025" : données financières internes sans rapport avec la checklist documentaire\n`;
+        warn += `\nCes documents perturbent la recherche de référence. L'agent tente quand même de produire un résultat...\n\n`;
+        if (ragInfo.hasGood) {
+          const pieces = prof === 'demandeur_emploi' ? getPiecesDE(body) : getPiecesSal();
+          warn += `PROFIL_CONFIRME : ${prof} (partiellement)\nPIECES_MANQUANTES :\n${pieces.map(p=>`  — ${p}`).join('\n')}\nSTATUT_DOSSIER : incomplet\n\n⚠️ Score dégradé par la présence de documents hors-contexte.`;
+        } else {
+          warn += `PROFIL_CONFIRME : inconnu\nPIECES_MANQUANTES : impossible à déterminer — référentiel documentaire absent\nSTATUT_DOSSIER : échec`;
+        }
+        return warn;
+      }
+      const pieces = prof === 'demandeur_emploi' ? getPiecesDE(body) : prof === 'salarié' ? getPiecesSal() : [...getPiecesDE(body)];
+      return `PROFIL_CONFIRME : ${prof}\nPIECES_PRESENTES : ${body.toLowerCase().includes('cv')?'CV (mentionné comme joint)':'Aucune pièce transmise à ce stade'}\nPIECES_MANQUANTES :\n${pieces.map(p=>`  — ${p}`).join('\n')}\nPIECES_A_CLARIFIER : ${prof==='demandeur_emploi'?'Indemnisation ARE (oui/non), nom conseiller France Travail':prof==='salarié'?'OPCO de branche, accord formel employeur':'Statut exact du candidat'}\nSTATUT_DOSSIER : incomplet`;
+    }
+    case 'avis_google':
+      return `Cher(e) client(e),\n\nNous vous remercions d'avoir pris le temps de laisser votre avis sur notre établissement.\n\nVotre retour est précieux et nous permet de nous améliorer continuellement. Nous serions ravis de vous revoir très prochainement.\n\nCordialement,\nL'équipe Format'Upgrade\n\n⚠️ [ERREUR PIPELINE] : L'Agent 2 répond à un avis Google au lieu de vérifier les pièces justificatives. La checklist documentaire n'a pas été produite.`;
+    case 'analyseur_devis':
+      return `ANALYSE DEVIS — Agent 2\n\nNOM_FOURNISSEUR : Format'Upgrade (auto-référence incohérente)\nMONTANT_HT : Non déterminé\nRECOMMANDATION : Document non conforme à un devis fournisseur\n\n⚠️ [ERREUR PIPELINE] : L'Agent 2 analyse la qualification de l'Agent 1 comme s'il s'agissait d'un devis fournisseur. Aucune pièce justificative n'a été vérifiée.`;
+    case 'entretien':
+      return `PRÉPARATION ENTRETIEN — Agent 2\n\nPOINTS_FORTS du dossier :\n— Motivation clairement exprimée\n— Disponibilité confirmée\n\nAXES D'AMÉLIORATION :\n— Dossier incomplet selon les critères RH standards\n\n⚠️ [ERREUR PIPELINE] : L'Agent 2 évalue le dossier comme un entretien annuel. Aucune pièce justificative n'a été contrôlée.`;
+    default:
+      if (promptType.startsWith('wrong_agent_')) {
+        const src = promptType.replace('wrong_agent_', '');
+        return `⚠️ Ce prompt appartient à l'Agent ${src}.\nL'Agent 2 ne peut pas effectuer le contrôle documentaire avec ces instructions.\nRésultat : checklist non produite, pipeline compromis.`;
+      }
+      return `⚠️ Prompt non reconnu.\nContrôle documentaire impossible.\nStatut dossier : indéterminé.`;
+  }
+}
+
+function genA3(promptType, a1Output, a2Output, body, from, subj, prof, lvl, qs, fin, ragInfo) {
+  switch(promptType) {
+    case 'empty':
+      return `⚠️ AGENT INACTIF — Aucun prompt configuré.\nAucune réponse ne peut être rédigée.\n\nBrouillon produit :\n\n"Bonjour, merci pour votre message. Nous vous recontacterons. Cordialement."`;
+    case 'correct': {
+      if (ragInfo.hasSecrets)
+        return `⚠️ ALERTE — La base RAG contient des données sensibles.\nL'agent a été exposé à des codes d'accès et données bancaires confidentielles.\n\nPar mesure de sécurité, la rédaction est suspendue.\nAction requise : retirer immédiatement le document "Codes & accès entreprise" de la base RAG.`;
+      const pieces = prof==='demandeur_emploi' ? getPiecesDE(body) : prof==='salarié' ? getPiecesSal() : [];
+      const draft = buildDraft(prof, lvl, qs, pieces, from||'candidat@exemple.fr', fin);
+      return `Email rédigé avec succès.\nDestinataire : ${from||'inconnu'}\nObjet : Re: ${subj||'Demande formation IA'}\nQuestions traitées : ${qs.join(', ')}\n\n--- BROUILLON ---\n\n${draft}`;
+    }
+    case 'avis_google':
+      return `Bonjour,\n\nNous avons bien pris connaissance de votre commentaire et nous vous en remercions sincèrement.\n\nVotre expérience compte beaucoup pour nous. Si vous avez des suggestions pour améliorer nos services, n'hésitez pas à nous contacter directement.\n\nNous espérons vous retrouver très prochainement !\n\nCordialement,\nL'équipe Format'Upgrade\n⭐⭐⭐⭐⭐\n\n⚠️ [ERREUR PIPELINE] : L'Agent 3 a rédigé une réponse à un avis Google au lieu de rédiger un email de réponse à une demande d'inscription. Le candidat ${from||'(inconnu)'} n'a reçu aucune réponse à ses questions.`;
+    case 'analyseur_devis':
+      return `SYNTHÈSE DEVIS — Format'Upgrade\n\nNOM_FOURNISSEUR : Non identifié\nMONTANT_HT : À compléter\nDELAI : Non spécifié\nRECOMMANDATION : Demander des informations complémentaires\n\n⚠️ [ERREUR PIPELINE] : L'Agent 3 a produit une analyse de devis au lieu d'un email de réponse au candidat. Aucune réponse exploitable n'a été générée.`;
+    case 'entretien':
+      return `GUIDE D'ENTRETIEN ANNUEL\n\nContexte : Collaborateur en démarche de formation continue\n\nQUESTIONS À POSER :\n1. "Quelles compétences souhaitez-vous développer prioritairement ?"\n2. "Comment envisagez-vous d'appliquer cette formation dans votre poste ?"\n3. "Quels obstacles anticipez-vous ?"\n4. "Comment mesurerez-vous votre progression ?"\n5. "Quels sont vos objectifs à 12 mois ?"\n\n⚠️ [ERREUR PIPELINE] : L'Agent 3 a produit un guide d'entretien annuel au lieu de rédiger un email de réponse à la demande d'inscription de ${from||'le candidat'}.`;
+    default:
+      if (promptType.startsWith('wrong_agent_')) {
+        const src = promptType.replace('wrong_agent_', '');
+        return `⚠️ Ce prompt appartient à l'Agent ${src}.\nL'Agent 3 ne peut pas rédiger un email de réponse avec ces instructions.\nBrouillon non produit.`;
+      }
+      return `⚠️ Prompt non reconnu.\nRédaction impossible. Aucun email n'a été produit.`;
+  }
+}
+
+function genA4(promptType, a3Output, a1t, a2t, a3t, ragInfo) {
+  const baseScore = calcScore(a1t, a2t, a3t, promptType, ragInfo);
+  const sc = baseScore >= 8 ? 'var(--success)' : baseScore >= 5 ? 'var(--warning)' : 'var(--danger)';
+  const vlbl = baseScore >= 8 ? 'PRÊT À ENVOYER' : 'VALIDATION HUMAINE REQUISE';
+
+  switch(promptType) {
+    case 'empty':
+      return { text: `⚠️ AGENT INACTIF — Supervision impossible.\nAucun prompt configuré pour cet agent.\n\nLe pipeline s'arrête ici sans validation qualité.`, score: 1, vlbl: 'VALIDATION HUMAINE REQUISE', sc: 'var(--danger)' };
+    case 'correct': {
+      if (ragInfo.hasSecrets)
+        return { text: `SCORE: 0/10\nVERDICT: ARRÊT IMMÉDIAT\n\nALERTE CRITIQUE : Des données ultra-confidentielles (codes d'accès, IBAN, mots de passe) ont été injectées dans la base RAG et exposées au pipeline. La réponse générée est compromise. Arrêt obligatoire.\n\nAction requise : retirer le document "Codes & accès entreprise" et relancer.`, score: 0, vlbl: 'ARRÊT IMMÉDIAT', sc: 'var(--danger)' };
+      let text = `SCORE: ${baseScore}/10\nVERDICT: ${vlbl}\n\n`;
+      if (baseScore >= 8) {
+        text += `POINTS_FORTS:\n— Profil candidat correctement identifié\n— Pièces manquantes correctement listées\n— Toutes les questions traitées\n— Ton professionnel et accueillant\n\nDECISION: La réponse est complète et cohérente, prête pour relecture humaine.`;
+      } else if (baseScore >= 5) {
+        text += `POINTS_FORTS:\n— Structure globale correcte\n\nPOINTS_A_CORRIGER:\n${ragInfo.empty?'— Base RAG vide : pièces non vérifiées\n':''}${ragInfo.hasBad?'— Documents hors-contexte dans la base RAG\n':''}— Validation humaine recommandée\n\nDECISION: La réponse est partielle, vérification nécessaire.`;
+      } else {
+        text += `POINTS_A_CORRIGER:\n— Agents mal configurés : résultats dégradés sur toute la chaîne\n— Réponse inutilisable en l'état\n\nDECISION: Pipeline à reconfigurer intégralement avant relance.`;
+      }
+      return { text, score: baseScore, vlbl, sc };
+    }
+    case 'avis_google':
+      return { text: `SCORE: 1/10\nVERDICT: VALIDATION HUMAINE REQUISE\n\nPOINTS_A_CORRIGER:\n— L'Agent 4 évalue une réponse à un avis Google au lieu d'un email d'inscription\n— Aucune des 5 questions du candidat n'a reçu de réponse\n— Pipeline entièrement hors-sujet\n\nDECISION: Tous les agents ont répondu à un avis Google imaginaire. Le candidat n'a aucune réponse à sa demande d'inscription.`, score: 1, vlbl: 'VALIDATION HUMAINE REQUISE', sc: 'var(--danger)' };
+    default:
+      if (promptType.startsWith('wrong_agent_')) {
+        const src = promptType.replace('wrong_agent_', '');
+        return { text: `⚠️ Ce prompt appartient à l'Agent ${src}.\nL'Agent 4 ne peut pas effectuer la supervision qualité avec ces instructions.\n\nSCORE: 0/10\nVERDICT: PIPELINE NON FONCTIONNEL`, score: 0, vlbl: 'PIPELINE NON FONCTIONNEL', sc: 'var(--danger)' };
+      }
+      return { text: `SCORE: 2/10\nVERDICT: VALIDATION HUMAINE REQUISE\n\nDECISION: Prompt non reconnu — supervision impossible, validation manuelle obligatoire.`, score: 2, vlbl: 'VALIDATION HUMAINE REQUISE', sc: 'var(--danger)' };
+  }
+}
+
+function calcScore(p1t, p2t, p3t, p4t, ragInfo) {
+  let s = 10;
+  const checkPrompt = (t, agentIdx) => {
+    if (!t || !t.trim()) return -3;
+    const p = PROMPT_LIBRARY.find(x => t.trim() === x.prompt.trim());
+    if (!p) return -2;
+    if (p.forAgent === agentIdx) return 0;
+    if (p.tag === 'wrong' || p.forAgent !== agentIdx) return -3;
+    return -1;
+  };
+  s += checkPrompt(p1t, 1);
+  s += checkPrompt(p2t, 2);
+  s += checkPrompt(p3t, 3);
+  if (!p4t || !p4t.trim()) s -= 1;
+  if (ragInfo.empty) s -= 2;
+  if (ragInfo.hasBad) s -= 1;
+  if (ragInfo.hasSecrets) s -= 5;
+  return Math.max(0, Math.min(10, s));
+}
+
+// ══════════════════════════════════════
+// MAIN PIPELINE
+// ══════════════════════════════════════
+async function launch() {
+  if (running) return;
+  const body = document.getElementById('ebody').value.trim();
+  const from = document.getElementById('efrom').value.trim();
+  const subj = document.getElementById('esubj').value.trim();
+  if (!body) { alert('Merci de rédiger ou charger un email avant de lancer le pipeline.'); return; }
+
+  running = true;
+  document.getElementById('launch-btn').disabled = true;
+  document.getElementById('empty-msg')?.remove();
+  const area = document.getElementById('results-area');
+  area.innerHTML = '';
+
+  const t1 = getPromptType(1), t2 = getPromptType(2);
+  const t3 = getPromptType(3), t4 = getPromptType(4);
+  const ragInfo = getRAGType();
+  const prof = detectProf(body), lvl = detectLvl(body), qs = detectQ(body);
+  const fin = prof==='demandeur_emploi'?'AIF France Travail ou CPF':prof==='salarié'?'OPCO ou CPF':'À clarifier selon le profil';
+
+  resetNodes(); setProg(5); await sleep(300);
+
+  // TRIGGER
+  setNode('trigger','done','Email reçu ✓');
+  setConn('1','conn-active'); setProg(10);
+  document.getElementById('pipe-tip').textContent = 'Agent 1 analyse la demande entrante...';
+  await sleep(500);
+
+  // A1
+  const c1 = mkCard('a1','A1','ni-a1','Agent 1 — Qualification de la demande');
+  area.appendChild(c1);
+  setNode('a1','running','En cours...');
+  setChip('a1','running','En cours'); setProg(20);
+  await sleep(700);
+  const a1Out = genA1(t1, body, from, prof, lvl, qs, fin);
+  await stream('a1', a1Out, 7);
+  const a1Done = t1 === 'correct';
+  setNode('a1', a1Done?'done':'error', a1Done?'Terminé ✓':'Erreur ⚠');
+  setConn('1','conn-done');
+  setConn('2', a1Done?'conn-active':'conn-active');
+  setChip('a1', a1Done?'done':'warn', a1Done?'Terminé':'Hors sujet');
+  setProg(35); await sleep(500);
+
+  // A2
+  const c2 = mkCard('a2','A2','ni-a2','Agent 2 — Contrôle documentaire');
+  area.appendChild(c2);
+  setNode('a2','running','En cours...');
+  setChip('a2','running','En cours');
+  document.getElementById('pipe-tip').textContent = 'Agent 2 vérifie les pièces requises...';
+  setProg(45); await sleep(800);
+  const a2Out = genA2(t2, a1Out, body, prof, ragInfo);
+  await stream('a2', a2Out, 7);
+  const a2Done = t2 === 'correct' && !ragInfo.hasSecrets;
+  setNode('a2', a2Done?'done':'error', a2Done?'Terminé ✓':'Erreur ⚠');
+  setConn('2','conn-done'); setConn('3','conn-active');
+  setChip('a2', a2Done?'done':'warn', a2Done?'Terminé':'Hors sujet');
+  setProg(58); await sleep(500);
+
+  // A3
+  const c3 = mkCard('a3','A3','ni-a3','Agent 3 — Rédaction de la réponse');
+  area.appendChild(c3);
+  setNode('a3','running','En cours...');
+  setChip('a3','running','En cours');
+  document.getElementById('pipe-tip').textContent = 'Agent 3 rédige la réponse email...';
+  setProg(68); await sleep(900);
+  const a3Out = genA3(t3, a1Out, a2Out, body, from, subj, prof, lvl, qs, fin, ragInfo);
+  await stream('a3', a3Out, 5);
+  const a3Done = t3 === 'correct' && !ragInfo.hasSecrets;
+  setNode('a3', a3Done?'done':'error', a3Done?'Terminé ✓':'Erreur ⚠');
+  setConn('3','conn-done'); setConn('4','conn-active');
+  setChip('a3', a3Done?'done':'warn', a3Done?'Terminé':'Hors sujet');
+  setProg(80); await sleep(500);
+
+  // A4
+  const c4 = mkCard('a4','A4','ni-a4','Agent 4 — Supervision qualité');
+  area.appendChild(c4);
+  setNode('a4','running','En cours...');
+  setChip('a4','running','En cours');
+  document.getElementById('pipe-tip').textContent = 'Agent 4 évalue la qualité de la réponse...';
+  setProg(88); await sleep(900);
+  const a4Res = genA4(t4, a3Out, agentPrompts[1], agentPrompts[2], agentPrompts[3], ragInfo);
+  await stream('a4', a4Res.text, 8);
+
+  const sr = document.createElement('div');
+  sr.className = 'score-row';
+  const vbg = a4Res.score>=8?'var(--green-bg)':a4Res.score>=5?'var(--amber-bg)':'var(--red-bg)';
+  const vco = a4Res.score>=8?'var(--green-text)':a4Res.score>=5?'var(--amber-text)':'var(--red-text)';
+  const vbo = a4Res.score>=8?'var(--green-border)':a4Res.score>=5?'var(--amber-border)':'var(--red-border)';
+  sr.innerHTML = `<span class="score-lbl">Score qualité</span><span class="score-num" style="color:${a4Res.sc}">${a4Res.score}/10</span><div class="score-bar-wrap"><div class="score-bar" style="width:${a4Res.score*10}%;background:${a4Res.sc}"></div></div><span style="font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;background:${vbg};color:${vco};border:1px solid ${vbo};">${a4Res.vlbl}</span>`;
+  document.getElementById('body-a4').appendChild(sr);
+
+  const a4Done = t4 === 'correct';
+  setNode('a4', a4Done&&a4Res.score>=7?'done':'error', `Score ${a4Res.score}/10`);
+  setConn('4','conn-done'); setConn('5','conn-done');
+  setChip('a4', a4Done&&a4Res.score>=7?'done':'warn', `Score ${a4Res.score}/10`);
+  setProg(95); await sleep(400);
+
+  // FINAL
+  const allGood = a1Done && a2Done && a3Done && a4Done && a4Res.score >= 7;
+  setNode('out', allGood?'done':'error', allGood?'Brouillon prêt ✓':'Pipeline dégradé ⚠');
+  setProg(100);
+  document.getElementById('pipe-tip').textContent = allGood
+    ? 'Pipeline terminé — brouillon prêt à envoyer.'
+    : 'Pipeline terminé avec erreurs — vérifiez la configuration des agents et du RAG.';
+
+  const fc = document.createElement('div');
+  fc.className = 'final-card';
+  fc.style.borderColor = allGood ? 'var(--green-border)' : 'var(--amber-border)';
+
+  const draftEmail = (t3 === 'correct' && !ragInfo.hasSecrets)
+    ? buildDraft(prof, lvl, qs, prof==='demandeur_emploi'?getPiecesDE(body):prof==='salarié'?getPiecesSal():[], from||'candidat@exemple.fr', fin)
+    : a3Out;
+
+  fc.innerHTML = `
+    <div class="final-top">
+      <div class="final-icon" style="background:${allGood?'var(--green-bg)':'var(--amber-bg)'};color:${allGood?'var(--green-text)':'var(--amber-text)'}">${allGood?'✓':'⚠'}</div>
+      <div class="final-title">${allGood?'Brouillon email — prêt pour validation humaine':'Pipeline dégradé — vérifiez la configuration'}</div>
+      <span style="font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;background:${vbg};color:${vco};border:1px solid ${vbo};">${a4Res.vlbl}</span>
+    </div>
+    <div class="final-email" id="final-txt">${draftEmail}</div>
+    <button class="copy-btn" onclick="copyDraft()">Copier le brouillon</button>
+  `;
+  area.appendChild(fc);
+
+  running = false;
+  document.getElementById('launch-btn').disabled = false;
+}
+
+function copyDraft() {
+  const t = document.getElementById('final-txt').textContent;
+  navigator.clipboard.writeText(t).then(() => {
+    const b = document.querySelector('.copy-btn');
+    b.textContent = 'Copié !';
+    setTimeout(() => { b.textContent = 'Copier le brouillon'; }, 2000);
+  });
+}
+
+function resetNodes() {
+  ['trigger','a1','a2','a3','a4','out'].forEach(id => setNode(id,'idle','En attente'));
+  ['1','2','3','4','5'].forEach(id => setConn(id,''));
+  setProg(0);
+}
+
+function resetAll() {
+  if (running) return;
+  resetNodes();
+  document.getElementById('results-area').innerHTML = '<div class="empty-msg" id="empty-msg"><div class="empty-icon">⚡</div>Lance le pipeline pour voir les 4 agents travailler en temps réel.</div>';
+  document.getElementById('pipe-tip').textContent = 'Charge un email ou rédige un message, puis lance le pipeline.';
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+document.getElementById('app').style.display = 'none';
+buildAgentsGrid();
+buildLibGrid();
+buildDocLib();
+renderDroppedDocs();
+</script>
+</body>
+</html>
